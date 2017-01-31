@@ -9,6 +9,8 @@ import time
 import pytz
 from dateutil import parser
 from datetime import datetime, timedelta
+import smtplib
+from email.mime.text import MIMEText
 
 utc = pytz.UTC
 
@@ -47,6 +49,28 @@ def signal_handler(signal, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
+def textFromEmail():
+    msg = "New Udacity project to review."
+    msg = MIMEText(msg)
+
+    sender = 'giladriemer@gmail.com'
+    with open('mailPwd.txt') as f:
+        pwd = f.read().strip()
+    recipients = ['giladgressel@gmail.com']
+    msg['From'] = sender
+    msg['To'] = ','.join(recipients)
+
+    try:
+        s = smtplib.SMTP('smtp.gmail.com:587')
+        s.ehlo()
+        s.starttls()
+        s.login(sender, pwd)
+        s.sendmail(sender, recipients, msg.as_string())
+        s.quit()
+        print "Sent mail."
+    except:
+        print "Failed to send mail."
+
 def alert_for_assignment(current_request, headers):
     if current_request and current_request['status'] == 'fulfilled':
         logger.info("")
@@ -55,6 +79,8 @@ def alert_for_assignment(current_request, headers):
         logger.info("View it here: " + REVIEW_URL.format(sid=current_request['submission_id']))
         logger.info("=================================================")
         logger.info("Continuing to poll...")
+	textFromEmail()
+
         return None
     return current_request
 
@@ -90,7 +116,10 @@ def fetch_certified_pairs():
     certs_resp.raise_for_status()
 
     certs = certs_resp.json()
-    project_ids = [cert['project']['id'] for cert in certs if cert['status'] == 'certified']
+
+    # project_ids = [cert['project']['id'] for cert in certs if cert['status'] == 'certified']
+    ''' My own edit here: restricting projects to just Capstone and Capstone Proposal for now '''
+    project_ids = [274] # 108 = Capstone, 236 = Proposal, 274 = my first neural network
 
     logger.info("Found certifications for project IDs: %s in languages %s",
                 str(project_ids), str(languages))
